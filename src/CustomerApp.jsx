@@ -28,6 +28,7 @@ import {
   Image as ImageIcon,
   X,
   Loader2,
+  Calendar,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -358,7 +359,7 @@ function PortfolioCard({ Icon, categoryLabel, rotate, item }) {
   );
 }
 
-function ProviderDetailScreen({ provider, onBack, onRequestQuote, quoteSent, quoteError }) {
+function ProviderDetailScreen({ provider, onBack, onOpenQuoteForm, quoteSent }) {
   const Icon = CATEGORY_META[provider.category].icon;
   const rotations = [-2, 1.5, -1, 2, -1.5, 1];
   // Already rating-sorted by the API.
@@ -447,18 +448,8 @@ function ProviderDetailScreen({ provider, onBack, onRequestQuote, quoteSent, quo
       </div>
 
       <div style={{ padding: "12px 20px 20px", background: COLORS.baseDeep }}>
-        {quoteError && (
-          <span
-            style={{
-              display: "block", marginBottom: 8, textAlign: "center",
-              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.rose,
-            }}
-          >
-            {quoteError}
-          </span>
-        )}
         <button
-          onClick={onRequestQuote}
+          onClick={onOpenQuoteForm}
           disabled={quoteSent}
           className="flex items-center justify-center gap-2"
           style={{
@@ -481,6 +472,159 @@ function ProviderDetailScreen({ provider, onBack, onRequestQuote, quoteSent, quo
           ) : (
             `Request a quote from ${provider.name.split(" ")[0]}`
           )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QuoteFormScreen({ provider, description, onDescriptionChange, date, onDateChange, photos, onAddPhoto, onRemovePhoto, onBack, onSubmit, submitting, error }) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-3" style={{ padding: "6px 20px 0" }}>
+        <button
+          onClick={onBack}
+          className="flex items-center justify-center"
+          style={{ width: 30, height: 30, borderRadius: 999, background: COLORS.surface, border: "none", cursor: "pointer" }}
+        >
+          <ChevronLeft size={17} color={COLORS.textOnGreen} />
+        </button>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: COLORS.textOnGreenMuted, letterSpacing: 0.5 }}>
+          REQUEST A QUOTE
+        </span>
+      </div>
+
+      <div className="flex flex-col" style={{ overflowY: "auto", flex: 1, padding: "16px 20px 20px" }}>
+        <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 19, color: COLORS.textOnGreen }}>
+          {provider.business}
+        </span>
+        <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.textOnGreenMuted, marginTop: 2 }}>
+          Tell them what you need — the more detail, the better the quote.
+        </span>
+
+        <span
+          style={{
+            display: "block", marginTop: 20,
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: COLORS.textOnGreenMuted, letterSpacing: 0.5,
+          }}
+        >
+          WHAT DO YOU NEED
+        </span>
+        <textarea
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          placeholder="e.g. 3-tier vanilla birthday cake, feeds ~25, needed for a christening"
+          rows={4}
+          style={{
+            marginTop: 8,
+            width: "100%",
+            resize: "none",
+            background: COLORS.surface,
+            border: `1px solid ${COLORS.hairlineOnGreen}`,
+            borderRadius: 10,
+            padding: "10px 12px",
+            color: COLORS.textOnGreen,
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            fontSize: 13,
+          }}
+        />
+
+        <span
+          style={{
+            display: "block", marginTop: 18,
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: COLORS.textOnGreenMuted, letterSpacing: 0.5,
+          }}
+        >
+          WHEN DO YOU NEED IT
+        </span>
+        <div
+          className="flex items-center gap-2"
+          style={{ marginTop: 8, background: COLORS.surface, border: `1px solid ${COLORS.hairlineOnGreen}`, borderRadius: 10, padding: "10px 12px" }}
+        >
+          <Calendar size={14} color={COLORS.gold} />
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => onDateChange(e.target.value)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: COLORS.textOnGreen,
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: 13,
+              flex: 1,
+              colorScheme: "dark",
+            }}
+          />
+        </div>
+
+        <span
+          style={{
+            display: "block", marginTop: 18,
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: COLORS.textOnGreenMuted, letterSpacing: 0.5,
+          }}
+        >
+          REFERENCE PHOTOS · OPTIONAL
+        </span>
+        <div className="flex gap-2" style={{ marginTop: 8 }}>
+          {photos.map((_, i) => (
+            <span
+              key={i}
+              className="relative flex items-center justify-center"
+              style={{ width: 52, height: 52, borderRadius: 8, background: COLORS.paper, border: `1px solid ${COLORS.paperShade}` }}
+            >
+              <ImageIcon size={18} color={COLORS.goldDeep} />
+              <button
+                onClick={() => onRemovePhoto(i)}
+                className="absolute flex items-center justify-center"
+                style={{ top: -6, right: -6, width: 16, height: 16, borderRadius: 999, background: COLORS.rose, border: "none", cursor: "pointer" }}
+                aria-label="Remove photo"
+              >
+                <X size={10} color="#2A0E10" />
+              </button>
+            </span>
+          ))}
+          {photos.length < 3 && (
+            <button
+              onClick={onAddPhoto}
+              className="flex items-center justify-center"
+              style={{ width: 52, height: 52, borderRadius: 8, border: `1px dashed ${COLORS.gold}`, background: "transparent", cursor: "pointer" }}
+            >
+              <Camera size={18} color={COLORS.gold} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: "12px 20px 20px", background: COLORS.baseDeep }}>
+        {error && (
+          <span
+            style={{
+              display: "block", marginBottom: 8, textAlign: "center",
+              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.rose,
+            }}
+          >
+            {error}
+          </span>
+        )}
+        <button
+          onClick={onSubmit}
+          disabled={submitting || !description.trim()}
+          className="flex items-center justify-center gap-2"
+          style={{
+            width: "100%",
+            padding: "14px 0",
+            borderRadius: 10,
+            border: "none",
+            background: !description.trim() ? COLORS.surface : COLORS.gold,
+            color: !description.trim() ? COLORS.textOnGreenMuted : COLORS.baseDeep,
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            fontWeight: 700,
+            fontSize: 14,
+            cursor: submitting || !description.trim() ? "default" : "pointer",
+          }}
+        >
+          {submitting ? "Sending…" : !description.trim() ? "Describe what you need to continue" : "Send quote request"}
         </button>
       </div>
     </div>
@@ -1225,7 +1369,7 @@ export default function CustomerApp() {
   }, [retryToken]);
 
   // ---- Book flow state ----
-  const [screen, setScreen] = useState("browse"); // browse | profile
+  const [screen, setScreen] = useState("browse"); // browse | profile | quoteForm
   const [activeCategory, setActiveCategory] = useState(null);
   const [providers, setProviders] = useState([]);
   const [providersLoading, setProvidersLoading] = useState(false);
@@ -1234,6 +1378,10 @@ export default function CustomerApp() {
   const [providerDetailLoading, setProviderDetailLoading] = useState(false);
   const [quoteSent, setQuoteSent] = useState(false);
   const [quoteError, setQuoteError] = useState(null);
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
+  const [quoteDescription, setQuoteDescription] = useState("");
+  const [quoteDate, setQuoteDate] = useState("");
+  const [quotePhotos, setQuotePhotos] = useState([]);
 
   useEffect(() => {
     if (mode !== "book" || apiStatus !== "ready") return;
@@ -1284,10 +1432,23 @@ export default function CustomerApp() {
     }
   };
 
-  const requestQuote = async () => {
-    if (!customerId || !selectedProvider) return;
+  const openQuoteForm = () => {
+    setQuoteDescription("");
+    setQuoteDate("");
+    setQuotePhotos([]);
+    setQuoteError(null);
+    setScreen("quoteForm");
+  };
+
+  const addQuotePhoto = () => setQuotePhotos((p) => (p.length < 3 ? [...p, p.length + 1] : p));
+  const removeQuotePhoto = (idx) => setQuotePhotos((p) => p.filter((_, i) => i !== idx));
+
+  const submitQuoteForm = async () => {
+    if (!customerId || !selectedProvider || !quoteDescription.trim()) return;
+    setQuoteSubmitting(true);
     setQuoteError(null);
     try {
+      const photoUrls = quotePhotos.map((_, i) => `demo://quote-reference-${i + 1}.jpg`);
       await apiFetch("/jobs", {
         method: "POST",
         body: JSON.stringify({
@@ -1296,11 +1457,17 @@ export default function CustomerApp() {
           lng: DEMO_LOCATION.lng,
           lat: DEMO_LOCATION.lat,
           addressText: DEMO_LOCATION.addressText,
+          description: quoteDescription.trim(),
+          scheduledFor: quoteDate ? new Date(quoteDate).toISOString() : undefined,
+          photoUrls: photoUrls.length ? photoUrls : undefined,
         }),
       });
       setQuoteSent(true);
+      setScreen("profile");
     } catch (err) {
       setQuoteError(err.message);
+    } finally {
+      setQuoteSubmitting(false);
     }
   };
 
@@ -1622,9 +1789,24 @@ export default function CustomerApp() {
               <ProviderDetailScreen
                 provider={selectedProvider}
                 onBack={() => setScreen("browse")}
-                onRequestQuote={requestQuote}
+                onOpenQuoteForm={openQuoteForm}
                 quoteSent={quoteSent}
-                quoteError={quoteError}
+              />
+            )}
+            {apiStatus === "ready" && mode === "book" && screen === "quoteForm" && selectedProvider && (
+              <QuoteFormScreen
+                provider={selectedProvider}
+                description={quoteDescription}
+                onDescriptionChange={setQuoteDescription}
+                date={quoteDate}
+                onDateChange={setQuoteDate}
+                photos={quotePhotos}
+                onAddPhoto={addQuotePhoto}
+                onRemovePhoto={removeQuotePhoto}
+                onBack={() => setScreen("profile")}
+                onSubmit={submitQuoteForm}
+                submitting={quoteSubmitting}
+                error={quoteError}
               />
             )}
           </div>
