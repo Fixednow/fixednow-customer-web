@@ -3,7 +3,6 @@ import {
   Star,
   MapPin,
   ChevronLeft,
-  ChevronRight,
   Cake,
   Flower2,
   PartyPopper,
@@ -29,6 +28,7 @@ import {
   X,
   Loader2,
   Calendar,
+  LogOut,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -44,15 +44,16 @@ const API_BASE_URL = "https://fixednow-api.onrender.com";
 // this exact point. A real app would use the device's actual GPS location.
 const DEMO_LOCATION = { lng: -6.2656, lat: 53.3244, addressText: "Rathmines, Dublin 6" };
 
-// Stand-in for real auth (see API README's "not yet built" list) — creates
-// or reuses one demo customer row so jobs/reviews have somewhere to attach.
-const DEMO_CUSTOMER = { email: "demo.customer@fixednow.app", fullName: "Demo Customer" };
+// A localStorage key for the customer's login token, so they stay logged
+// in across page reloads (safe here — this is a real deployed site, not a
+// sandboxed artifact, so localStorage works normally).
+const AUTH_STORAGE_KEY = "fixednow_customer_auth";
 
 async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  const { token, ...rest } = options;
+  const headers = { "Content-Type": "application/json", ...(rest.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...rest, headers });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(body?.error || `Request failed (${res.status})`);
@@ -232,6 +233,7 @@ function ProviderCard({ provider, onOpen }) {
             <MapPin size={11} color={COLORS.textOnGreenMuted} />
             <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.textOnGreenMuted }}>
               {provider.area}
+              {provider.distanceKm != null && ` · ${provider.distanceKm.toFixed(1)}km away`}
             </span>
           </div>
         </div>
@@ -414,6 +416,7 @@ function ProviderDetailScreen({ provider, onBack, onOpenQuoteForm, quoteSent }) 
             <MapPin size={12} color={COLORS.textOnGreenMuted} />
             <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.textOnGreenMuted }}>
               {provider.area}
+              {provider.distanceKm != null && ` · ${provider.distanceKm.toFixed(1)}km away`}
             </span>
           </div>
 
@@ -864,7 +867,7 @@ function UrgentRequestScreen({
   );
 }
 
-function SearchingScreen({ category, elapsedSeconds, noProvidersFound, canSimulateAccept, onSimulateAccept, errorMessage, onCancel }) {
+function SearchingScreen({ category, elapsedSeconds, noProvidersFound, errorMessage, onCancel }) {
   const Icon = ON_DEMAND_CATEGORY_META[category];
 
   if (noProvidersFound) {
@@ -930,20 +933,6 @@ function SearchingScreen({ category, elapsedSeconds, noProvidersFound, canSimula
       )}
 
       <div className="flex-1" />
-
-      {canSimulateAccept && (
-        <button
-          onClick={onSimulateAccept}
-          className="flex items-center justify-center gap-1.5"
-          style={{
-            width: "100%", padding: "13px 0", borderRadius: 10, marginBottom: 10,
-            border: `1px dashed ${COLORS.gold}`, background: "transparent", color: COLORS.gold,
-            fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 700, fontSize: 13, cursor: "pointer",
-          }}
-        >
-          Simulate: nearest provider accepts (demo)
-        </button>
-      )}
 
       <button
         onClick={onCancel}
@@ -1013,9 +1002,9 @@ function TrackingStepper({ stageIndex }) {
   );
 }
 
-function TrackingScreen({ match, stageIndex, onAdvance, onCancel, advancing }) {
+function TrackingScreen({ match, stageIndex, onCancel }) {
   const Icon = ON_DEMAND_CATEGORY_META[match.category];
-  const nextLabel = TRACKING_STAGES[Math.min(stageIndex + 1, TRACKING_STAGES.length - 1)];
+  const currentLabel = TRACKING_STAGES[stageIndex];
 
   return (
     <div className="flex flex-col h-full">
@@ -1103,27 +1092,22 @@ function TrackingScreen({ match, stageIndex, onAdvance, onCancel, advancing }) {
       </div>
 
       <div style={{ padding: "8px 20px 20px", background: COLORS.baseDeep }}>
-        <button
-          onClick={onAdvance}
-          disabled={advancing}
-          className="flex items-center justify-center gap-1.5"
+        <div
+          className="flex items-center justify-center gap-2"
           style={{
             width: "100%",
             padding: "13px 0",
             borderRadius: 10,
-            border: "none",
-            background: COLORS.gold,
-            color: COLORS.baseDeep,
-            fontFamily: "'IBM Plex Sans', sans-serif",
-            fontWeight: 700,
-            fontSize: 13.5,
-            cursor: advancing ? "default" : "pointer",
-            opacity: advancing ? 0.6 : 1,
+            border: `1px dashed ${COLORS.hairlineOnGreen}`,
+            color: COLORS.textOnGreenMuted,
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 11.5,
+            letterSpacing: 0.3,
           }}
         >
-          {advancing ? "Updating…" : `Simulate: ${nextLabel}`}
-          {!advancing && <ChevronRight size={15} />}
-        </button>
+          <Loader2 size={13} className="animate-spin" />
+          {currentLabel} — updates live as your provider progresses
+        </div>
         <button
           onClick={onCancel}
           style={{
@@ -1277,6 +1261,7 @@ function mapProviderListItem(row) {
     category: row.category_name,
     categoryId: row.category_id,
     area: row.base_address_text || "Location not set",
+    distanceKm: row.distance_km != null ? Number(row.distance_km) : null,
     rating: Number(row.rating_avg) || 0,
     reviewCount: row.rating_count || 0,
     // List view doesn't fetch full portfolios (would be N+1 queries) — the
@@ -1324,15 +1309,105 @@ function ConnectionStatus({ status, error, onRetry }) {
   return null;
 }
 
+function AuthScreen({ mode, onModeChange, email, onEmailChange, password, onPasswordChange, fullName, onFullNameChange, onSubmit, submitting, error }) {
+  const isSignup = mode === "signup";
+  return (
+    <div className="flex flex-col h-full" style={{ padding: "20px 20px 24px" }}>
+      <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 24, color: COLORS.textOnGreen }}>
+        {isSignup ? "Create an account" : "Welcome back"}
+      </span>
+      <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.textOnGreenMuted, marginTop: 4 }}>
+        {isSignup ? "Just a few details to get started" : "Log in to request or book a service"}
+      </span>
+
+      <div className="flex flex-col" style={{ marginTop: 24, gap: 12 }}>
+        {isSignup && (
+          <input
+            value={fullName}
+            onChange={(e) => onFullNameChange(e.target.value)}
+            placeholder="Full name"
+            style={{
+              background: COLORS.surface, border: `1px solid ${COLORS.hairlineOnGreen}`, borderRadius: 10,
+              padding: "12px 14px", color: COLORS.textOnGreen, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14,
+            }}
+          />
+        )}
+        <input
+          value={email}
+          onChange={(e) => onEmailChange(e.target.value)}
+          placeholder="Email"
+          type="email"
+          style={{
+            background: COLORS.surface, border: `1px solid ${COLORS.hairlineOnGreen}`, borderRadius: 10,
+            padding: "12px 14px", color: COLORS.textOnGreen, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14,
+          }}
+        />
+        <input
+          value={password}
+          onChange={(e) => onPasswordChange(e.target.value)}
+          placeholder="Password"
+          type="password"
+          style={{
+            background: COLORS.surface, border: `1px solid ${COLORS.hairlineOnGreen}`, borderRadius: 10,
+            padding: "12px 14px", color: COLORS.textOnGreen, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14,
+          }}
+        />
+      </div>
+
+      {error && (
+        <span style={{ marginTop: 12, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.rose }}>
+          {error}
+        </span>
+      )}
+
+      <div className="flex-1" />
+
+      <button
+        onClick={onSubmit}
+        disabled={submitting}
+        style={{
+          width: "100%", padding: "14px 0", borderRadius: 10, border: "none",
+          background: COLORS.gold, color: COLORS.baseDeep,
+          fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 700, fontSize: 14,
+          cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.7 : 1,
+        }}
+      >
+        {submitting ? "Please wait…" : isSignup ? "Create account" : "Log in"}
+      </button>
+
+      <button
+        onClick={() => onModeChange(isSignup ? "login" : "signup")}
+        style={{
+          marginTop: 10, background: "transparent", border: "none", cursor: "pointer",
+          fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.textOnGreenMuted,
+        }}
+      >
+        {isSignup ? "Already have an account? Log in" : "New here? Create an account"}
+      </button>
+    </div>
+  );
+}
+
 export default function CustomerApp() {
   const [mode, setMode] = useState("urgent"); // urgent | book
 
-  // ---- API connection / identity ----
+  // ---- API connection ----
   const [apiStatus, setApiStatus] = useState("checking"); // checking | ready | unreachable
   const [apiError, setApiError] = useState(null);
   const [retryToken, setRetryToken] = useState(0);
   const [categories, setCategories] = useState([]);
-  const [customerId, setCustomerId] = useState(null);
+
+  // ---- Auth ----
+  const [authToken, setAuthToken] = useState(null);
+  const [currentCustomer, setCurrentCustomer] = useState(null);
+  const [authScreenMode, setAuthScreenMode] = useState("login"); // login | signup
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authFullName, setAuthFullName] = useState("");
+  const [authError, setAuthError] = useState(null);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
+  const customerId = currentCustomer?.id ?? null;
 
   const categoryIdByName = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.name, c.id])),
@@ -1349,13 +1424,21 @@ export default function CustomerApp() {
         const catData = await apiFetch("/categories");
         if (cancelled) return;
         setCategories(catData.categories);
-        const custData = await apiFetch("/customers", {
-          method: "POST",
-          body: JSON.stringify(DEMO_CUSTOMER),
-        });
-        if (cancelled) return;
-        setCustomerId(custData.customerId);
         setApiStatus("ready");
+
+        // Restore a previous session if one was saved.
+        const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (saved) {
+          try {
+            const { token, customer } = JSON.parse(saved);
+            if (token && customer) {
+              setAuthToken(token);
+              setCurrentCustomer(customer);
+            }
+          } catch {
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+          }
+        }
       } catch (err) {
         if (!cancelled) {
           setApiStatus("unreachable");
@@ -1367,6 +1450,34 @@ export default function CustomerApp() {
       cancelled = true;
     };
   }, [retryToken]);
+
+  const submitAuth = async () => {
+    if (!authEmail.trim() || !authPassword.trim() || (authScreenMode === "signup" && !authFullName.trim())) return;
+    setAuthSubmitting(true);
+    setAuthError(null);
+    try {
+      const path = authScreenMode === "signup" ? "/auth/customer/signup" : "/auth/customer/login";
+      const body =
+        authScreenMode === "signup"
+          ? { email: authEmail.trim(), password: authPassword, fullName: authFullName.trim() }
+          : { email: authEmail.trim(), password: authPassword };
+      const data = await apiFetch(path, { method: "POST", body: JSON.stringify(body) });
+      setAuthToken(data.token);
+      setCurrentCustomer(data.customer);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token: data.token, customer: data.customer }));
+      setAuthPassword("");
+    } catch (err) {
+      setAuthError(err.message);
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
+  const logout = () => {
+    setAuthToken(null);
+    setCurrentCustomer(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  };
 
   // ---- Book flow state ----
   const [screen, setScreen] = useState("browse"); // browse | profile | quoteForm
@@ -1388,9 +1499,12 @@ export default function CustomerApp() {
     let cancelled = false;
     setProvidersLoading(true);
     setProvidersError(null);
+    const params = new URLSearchParams();
     const categoryId = activeCategory ? categoryIdByName[activeCategory] : undefined;
-    const qs = categoryId ? `?categoryId=${categoryId}` : "";
-    apiFetch(`/providers${qs}`)
+    if (categoryId) params.set("categoryId", categoryId);
+    params.set("lng", DEMO_LOCATION.lng);
+    params.set("lat", DEMO_LOCATION.lat);
+    apiFetch(`/providers?${params.toString()}`)
       .then((data) => {
         if (!cancelled) setProviders(data.providers.map(mapProviderListItem));
       })
@@ -1420,6 +1534,7 @@ export default function CustomerApp() {
         category: listItem.category,
         categoryId: listItem.categoryId,
         area: data.provider.base_address_text || listItem.area,
+        distanceKm: listItem.distanceKm,
         rating: Number(data.provider.rating_avg) || 0,
         reviewCount: data.provider.rating_count || 0,
         portfolio: data.portfolio.map((p) => ({ rating: p.rating, comment: p.comment })),
@@ -1451,8 +1566,8 @@ export default function CustomerApp() {
       const photoUrls = quotePhotos.map((_, i) => `demo://quote-reference-${i + 1}.jpg`);
       await apiFetch("/jobs", {
         method: "POST",
+        token: authToken,
         body: JSON.stringify({
-          customerId,
           categoryId: selectedProvider.categoryId,
           lng: DEMO_LOCATION.lng,
           lat: DEMO_LOCATION.lat,
@@ -1478,12 +1593,10 @@ export default function CustomerApp() {
   const [requestPhotos, setRequestPhotos] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [jobId, setJobId] = useState(null);
-  const [pingedOffers, setPingedOffers] = useState([]);
   const [noProvidersFound, setNoProvidersFound] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [match, setMatch] = useState(null);
   const [stageIndex, setStageIndex] = useState(0);
-  const [trackingAdvancing, setTrackingAdvancing] = useState(false);
   const searchTimerRef = useRef(null);
 
   useEffect(() => {
@@ -1500,7 +1613,6 @@ export default function CustomerApp() {
     setRequestPhotos([]);
     setElapsedSeconds(0);
     setJobId(null);
-    setPingedOffers([]);
     setNoProvidersFound(false);
     setSearchError(null);
     setMatch(null);
@@ -1564,7 +1676,7 @@ export default function CustomerApp() {
     let cancelled = false;
     const poll = async () => {
       try {
-        const job = await apiFetch(`/jobs/${jobId}`);
+        const job = await apiFetch(`/jobs/${jobId}`, { token: authToken });
         if (!cancelled) handleJobUpdate(job);
       } catch (err) {
         if (!cancelled) setSearchError(err.message);
@@ -1597,8 +1709,8 @@ export default function CustomerApp() {
       const photoUrls = requestPhotos.map((_, i) => `demo://request-photo-${i + 1}.jpg`);
       const data = await apiFetch("/jobs", {
         method: "POST",
+        token: authToken,
         body: JSON.stringify({
-          customerId,
           categoryId,
           lng: DEMO_LOCATION.lng,
           lat: DEMO_LOCATION.lat,
@@ -1611,8 +1723,6 @@ export default function CustomerApp() {
       if (data.pingedProviders.length === 0) {
         clearInterval(searchTimerRef.current);
         setNoProvidersFound(true);
-      } else {
-        setPingedOffers(data.pingedProviders);
       }
     } catch (err) {
       clearInterval(searchTimerRef.current);
@@ -1624,59 +1734,13 @@ export default function CustomerApp() {
     resetUrgentFlow();
   };
 
-  // Stands in for a provider's app calling POST /jobs/:id/offers/:id/accept
-  // — there's no second live client in this demo, so this fires the same
-  // real endpoint directly against the first pinged offer.
-  const handleSimulateAccept = async () => {
-    if (!jobId || pingedOffers.length === 0) return;
-    const offer = pingedOffers[0];
-    setSearchError(null);
-    try {
-      await apiFetch(`/jobs/${jobId}/offers/${offer.offerId}/accept`, {
-        method: "POST",
-        body: JSON.stringify({ providerId: offer.providerId }),
-      });
-      // The poll picks up the resulting status change on its next tick.
-    } catch (err) {
-      setSearchError(err.message);
-    }
-  };
-
-  const handleAdvanceTracking = async () => {
-    if (!jobId || !match) return;
-    setTrackingAdvancing(true);
-    try {
-      let data;
-      if (stageIndex === 0) {
-        data = await apiFetch(`/jobs/${jobId}/status`, {
-          method: "POST",
-          body: JSON.stringify({ providerId: match.providerId, status: "arrived" }),
-        });
-      } else if (stageIndex === 1) {
-        data = await apiFetch(`/jobs/${jobId}/status`, {
-          method: "POST",
-          body: JSON.stringify({ providerId: match.providerId, status: "in_progress" }),
-        });
-      } else {
-        data = await apiFetch(`/jobs/${jobId}/complete`, {
-          method: "POST",
-          body: JSON.stringify({ providerId: match.providerId, photoUrls: ["demo://completion-photo-1.jpg"] }),
-        });
-      }
-      handleJobUpdate(data.job);
-    } catch (err) {
-      setSearchError(err.message);
-    } finally {
-      setTrackingAdvancing(false);
-    }
-  };
-
   const handleSubmitRating = async (rating, comment) => {
-    if (jobId && customerId) {
+    if (jobId && authToken) {
       try {
         await apiFetch(`/jobs/${jobId}/review`, {
           method: "POST",
-          body: JSON.stringify({ customerId, rating, comment }),
+          token: authToken,
+          body: JSON.stringify({ rating, comment }),
         });
       } catch (err) {
         console.error("Failed to submit review:", err.message);
@@ -1724,14 +1788,44 @@ export default function CustomerApp() {
           />
 
           <StatusBar />
-          {apiStatus === "ready" && <ModeTabs mode={mode} onChange={setMode} />}
+          {apiStatus === "ready" && authToken && (
+            <div className="flex items-center gap-2" style={{ padding: "0 20px" }}>
+              <div style={{ flex: 1 }}>
+                <ModeTabs mode={mode} onChange={setMode} />
+              </div>
+              <button
+                onClick={logout}
+                className="flex items-center justify-center"
+                style={{ width: 30, height: 30, borderRadius: 8, background: COLORS.surface, border: "none", cursor: "pointer" }}
+                aria-label="Log out"
+              >
+                <LogOut size={13} color={COLORS.textOnGreenMuted} />
+              </button>
+            </div>
+          )}
 
           <div className="flex-1" style={{ overflow: "hidden" }}>
             {apiStatus !== "ready" && (
               <ConnectionStatus status={apiStatus} error={apiError} onRetry={() => setRetryToken((t) => t + 1)} />
             )}
 
-            {apiStatus === "ready" && mode === "urgent" && urgentScreen === "request" && (
+            {apiStatus === "ready" && !authToken && (
+              <AuthScreen
+                mode={authScreenMode}
+                onModeChange={setAuthScreenMode}
+                email={authEmail}
+                onEmailChange={setAuthEmail}
+                password={authPassword}
+                onPasswordChange={setAuthPassword}
+                fullName={authFullName}
+                onFullNameChange={setAuthFullName}
+                onSubmit={submitAuth}
+                submitting={authSubmitting}
+                error={authError}
+              />
+            )}
+
+            {apiStatus === "ready" && authToken && mode === "urgent" && urgentScreen === "request" && (
               <UrgentRequestScreen
                 selectedCategory={selectedOnDemandCategory}
                 onSelectCategory={setSelectedOnDemandCategory}
@@ -1743,31 +1837,27 @@ export default function CustomerApp() {
                 onRequest={handleSubmitRequest}
               />
             )}
-            {apiStatus === "ready" && mode === "urgent" && urgentScreen === "searching" && (
+            {apiStatus === "ready" && authToken && mode === "urgent" && urgentScreen === "searching" && (
               <SearchingScreen
                 category={selectedOnDemandCategory}
                 elapsedSeconds={elapsedSeconds}
                 noProvidersFound={noProvidersFound}
-                canSimulateAccept={pingedOffers.length > 0}
-                onSimulateAccept={handleSimulateAccept}
                 errorMessage={searchError}
                 onCancel={handleCancelSearch}
               />
             )}
-            {apiStatus === "ready" && mode === "urgent" && urgentScreen === "tracking" && match && (
+            {apiStatus === "ready" && authToken && mode === "urgent" && urgentScreen === "tracking" && match && (
               <TrackingScreen
                 match={match}
                 stageIndex={stageIndex}
-                onAdvance={handleAdvanceTracking}
                 onCancel={resetUrgentFlow}
-                advancing={trackingAdvancing}
               />
             )}
-            {apiStatus === "ready" && mode === "urgent" && urgentScreen === "rating" && match && (
+            {apiStatus === "ready" && authToken && mode === "urgent" && urgentScreen === "rating" && match && (
               <RatingScreen match={match} onSubmit={handleSubmitRating} />
             )}
 
-            {apiStatus === "ready" && mode === "book" && screen === "browse" && (
+            {apiStatus === "ready" && authToken && mode === "book" && screen === "browse" && (
               <BrowseScreen
                 providers={providers}
                 activeCategory={activeCategory}
@@ -1777,7 +1867,7 @@ export default function CustomerApp() {
                 error={providersError}
               />
             )}
-            {apiStatus === "ready" && mode === "book" && screen === "profile" && providerDetailLoading && (
+            {apiStatus === "ready" && authToken && mode === "book" && screen === "profile" && providerDetailLoading && (
               <div className="flex items-center justify-center gap-2 h-full">
                 <Loader2 size={14} color={COLORS.textOnGreenMuted} className="animate-spin" />
                 <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: COLORS.textOnGreenMuted }}>
@@ -1785,7 +1875,7 @@ export default function CustomerApp() {
                 </span>
               </div>
             )}
-            {apiStatus === "ready" && mode === "book" && screen === "profile" && !providerDetailLoading && selectedProvider && (
+            {apiStatus === "ready" && authToken && mode === "book" && screen === "profile" && !providerDetailLoading && selectedProvider && (
               <ProviderDetailScreen
                 provider={selectedProvider}
                 onBack={() => setScreen("browse")}
@@ -1793,7 +1883,7 @@ export default function CustomerApp() {
                 quoteSent={quoteSent}
               />
             )}
-            {apiStatus === "ready" && mode === "book" && screen === "quoteForm" && selectedProvider && (
+            {apiStatus === "ready" && authToken && mode === "book" && screen === "quoteForm" && selectedProvider && (
               <QuoteFormScreen
                 provider={selectedProvider}
                 description={quoteDescription}
