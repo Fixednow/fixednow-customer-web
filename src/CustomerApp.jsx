@@ -123,7 +123,6 @@ function StatusBar() {
       style={{ height: 28, color: COLORS.textOnGreenMuted, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
     >
       <span>9:41</span>
-      <span style={{ letterSpacing: 1 }}>SEND THE PROS</span>
       <span>82%</span>
     </div>
   );
