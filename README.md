@@ -1,4 +1,4 @@
-# FixedNow Customer Web App
+# Send the Pros — Customer Web App
 
 Standalone deployable version of the customer app — same code as the
 CustomerApp.jsx artifact, wrapped in a minimal Vite project so it can run

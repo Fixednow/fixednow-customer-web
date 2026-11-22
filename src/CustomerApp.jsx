@@ -67,7 +67,7 @@ async function apiFetch(path, options = {}) {
 // green + warm paper cards + a single gold accent for trust signals (rating,
 // CTA). Companion piece to the provider app's dark dispatch console: same
 // technical mono thread (IBM Plex Mono for ratings/prices) carried over for
-// brand continuity, but this is the "daylight, browsing" side of FixedNow.
+// brand continuity, but this is the "daylight, browsing" side of Send the Pros.
 // ---------------------------------------------------------------------------
 
 const COLORS = {
@@ -123,9 +123,30 @@ function StatusBar() {
       style={{ height: 28, color: COLORS.textOnGreenMuted, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
     >
       <span>9:41</span>
-      <span style={{ letterSpacing: 1 }}>FIXEDNOW · BOOK</span>
+      <span style={{ letterSpacing: 1 }}>SEND THE PROS</span>
       <span>82%</span>
     </div>
+  );
+}
+
+// Send the Pros customer mark: gold map pin carrying "PRO" on a green tile.
+// The provider (Partner) app uses the same pin with a worker inside, in
+// swapped colours, so the two apps read as one family.
+function BrandMark({ size = 44 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label="Send the Pros">
+      <rect width="100" height="100" rx="22" fill={COLORS.baseDeep} />
+      <path d="M50 12 C35 12 24 24 24 39 C24 58 50 86 50 86 C50 86 76 58 76 39 C76 24 65 12 50 12 Z" fill={COLORS.gold} />
+      <text x="50" y="47" textAnchor="middle" fontFamily="'Big Shoulders Display', sans-serif" fontWeight="900" fontSize="22" fill={COLORS.baseDeep}>PRO</text>
+    </svg>
+  );
+}
+
+function Wordmark({ size = 30 }) {
+  return (
+    <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 900, fontSize: size, lineHeight: 0.9, textTransform: "uppercase", color: COLORS.textOnGreen }}>
+      Send the <span style={{ color: COLORS.gold }}>Pros</span>
+    </span>
   );
 }
 
@@ -214,7 +235,7 @@ function ProviderCard({ provider, onOpen }) {
           <Icon size={18} color={COLORS.baseDeep} strokeWidth={2} />
         </span>
         <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-          <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 600, fontSize: 16, color: COLORS.textOnGreen }}>
+          <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 21, letterSpacing: 0.3, color: COLORS.textOnGreen }}>
             {provider.business}
           </span>
           <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.textOnGreenMuted }}>
@@ -256,13 +277,14 @@ function BrowseScreen({ providers, activeCategory, onSelectCategory, onOpenProvi
       <div style={{ padding: "6px 20px 0" }}>
         <span
           style={{
-            fontFamily: "'Zilla Slab', serif",
-            fontWeight: 700,
-            fontSize: 24,
+            fontFamily: "'Big Shoulders Display', sans-serif",
+            fontWeight: 800,
+            fontSize: 31,
+            letterSpacing: 0.3,
             color: COLORS.textOnGreen,
           }}
         >
-          Book a provider
+          Book a pro
         </span>
         <div>
           <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.textOnGreenMuted }}>
@@ -286,14 +308,14 @@ function BrowseScreen({ providers, activeCategory, onSelectCategory, onOpenProvi
           <div className="flex items-center justify-center gap-2" style={{ marginTop: 40 }}>
             <Loader2 size={14} color={COLORS.textOnGreenMuted} className="animate-spin" />
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: COLORS.textOnGreenMuted }}>
-              Loading providers…
+              Loading pros…
             </span>
           </div>
         )}
         {!loading && error && (
           <div className="flex flex-col items-center" style={{ marginTop: 40, textAlign: "center" }}>
             <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.rose }}>
-              Couldn't load providers
+              Couldn't load pros
             </span>
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: COLORS.textOnGreenMuted, marginTop: 4 }}>
               {error}
@@ -306,7 +328,7 @@ function BrowseScreen({ providers, activeCategory, onSelectCategory, onOpenProvi
         {!loading && !error && providers.length === 0 && (
           <div className="flex flex-col items-center" style={{ marginTop: 40 }}>
             <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.textOnGreenMuted }}>
-              No providers in this category yet
+              No pros in this category yet
             </span>
           </div>
         )}
@@ -378,7 +400,7 @@ function ProviderDetailScreen({ provider, onBack, onOpenQuoteForm, quoteSent }) 
           <ChevronLeft size={17} color={COLORS.textOnGreen} />
         </button>
         <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: COLORS.textOnGreenMuted, letterSpacing: 0.5 }}>
-          PROVIDER PROFILE
+          PRO PROFILE
         </span>
       </div>
 
@@ -392,7 +414,7 @@ function ProviderDetailScreen({ provider, onBack, onOpenQuoteForm, quoteSent }) 
               <Icon size={24} color={COLORS.baseDeep} strokeWidth={2} />
             </span>
             <div className="flex flex-col">
-              <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 19, color: COLORS.textOnGreen }}>
+              <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 25, letterSpacing: 0.3, color: COLORS.textOnGreen }}>
                 {provider.business}
               </span>
               <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.textOnGreenMuted }}>
@@ -498,7 +520,7 @@ function QuoteFormScreen({ provider, description, onDescriptionChange, date, onD
       </div>
 
       <div className="flex flex-col" style={{ overflowY: "auto", flex: 1, padding: "16px 20px 20px" }}>
-        <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 19, color: COLORS.textOnGreen }}>
+        <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 25, letterSpacing: 0.3, color: COLORS.textOnGreen }}>
           {provider.business}
         </span>
         <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.textOnGreenMuted, marginTop: 2 }}>
@@ -740,12 +762,12 @@ function UrgentRequestScreen({
   return (
     <div className="flex flex-col h-full">
       <div style={{ padding: "6px 20px 0" }}>
-        <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 24, color: COLORS.textOnGreen }}>
-          Need it fixed now?
+        <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 31, letterSpacing: 0.3, color: COLORS.textOnGreen }}>
+          Need a pro now?
         </span>
         <div>
           <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.textOnGreenMuted }}>
-            We'll match the nearest available provider
+            We'll send the nearest available pro
           </span>
         </div>
       </div>
@@ -809,7 +831,7 @@ function UrgentRequestScreen({
               ADD PHOTOS · OPTIONAL
             </span>
             <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.textOnGreenMuted, marginTop: 2 }}>
-              Helps the provider check stock/compatibility before accepting — may extend match time slightly
+              Helps the pro check stock/compatibility before accepting — may extend match time slightly
             </span>
             <div className="flex gap-2" style={{ marginTop: 8 }}>
               {photos.map((_, i) => (
@@ -879,11 +901,11 @@ function SearchingScreen({ category, elapsedSeconds, noProvidersFound, errorMess
         >
           <Icon size={28} color={COLORS.textOnGreenMuted} strokeWidth={1.75} />
         </span>
-        <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 19, color: COLORS.textOnGreen, marginTop: 22, textAlign: "center" }}>
-          No providers available right now
+        <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 25, letterSpacing: 0.3, color: COLORS.textOnGreen, marginTop: 22, textAlign: "center" }}>
+          No pros available right now
         </span>
         <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.textOnGreenMuted, marginTop: 6, textAlign: "center" }}>
-          Nobody is online for {category} near this location. Run seed.sql, or bring a provider online, and try again.
+          Nobody is online for {category} near you just now. Please try again in a few minutes.
         </span>
         <div className="flex-1" />
         <button
@@ -913,17 +935,17 @@ function SearchingScreen({ category, elapsedSeconds, noProvidersFound, errorMess
         </span>
       </div>
 
-      <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 19, color: COLORS.textOnGreen, marginTop: 26 }}>
+      <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 25, letterSpacing: 0.3, color: COLORS.textOnGreen, marginTop: 26 }}>
         Finding your {category.toLowerCase()}
       </span>
       <div className="flex items-center gap-1.5" style={{ marginTop: 6 }}>
         <Loader2 size={13} color={COLORS.textOnGreenMuted} className="animate-spin" />
         <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: COLORS.textOnGreenMuted }}>
-          Pinging nearby providers · {elapsedSeconds}s
+          Pinging nearby pros · {elapsedSeconds}s
         </span>
       </div>
       <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.textOnGreenMuted, marginTop: 4, textAlign: "center" }}>
-        Several providers are being notified at once — first to accept gets the job
+        Several pros are being notified at once — first to accept gets the job
       </span>
 
       {errorMessage && (
@@ -1106,7 +1128,7 @@ function TrackingScreen({ match, stageIndex, onCancel }) {
           }}
         >
           <Loader2 size={13} className="animate-spin" />
-          {currentLabel} — updates live as your provider progresses
+          {currentLabel} — updates live as your pro progresses
         </div>
         <button
           onClick={onCancel}
@@ -1166,7 +1188,7 @@ function RatingScreen({ match, onSubmit }) {
       </div>
 
       <div className="flex flex-col" style={{ overflowY: "auto", flex: 1, padding: "14px 20px 20px" }}>
-        <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 20, color: COLORS.textOnGreen }}>
+        <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 26, letterSpacing: 0.3, color: COLORS.textOnGreen }}>
           {match.providerName} finished up
         </span>
 
@@ -1284,7 +1306,7 @@ function ConnectionStatus({ status, error, onRetry }) {
   if (status === "unreachable") {
     return (
       <div className="flex flex-col items-center justify-center h-full" style={{ padding: 24, textAlign: "center" }}>
-        <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 17, color: COLORS.textOnGreen }}>
+        <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: 0.3, color: COLORS.textOnGreen }}>
           Can't reach the API
         </span>
         <span style={{ marginTop: 8, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.textOnGreenMuted, maxWidth: 260 }}>
@@ -1313,7 +1335,16 @@ function AuthScreen({ mode, onModeChange, email, onEmailChange, password, onPass
   const isSignup = mode === "signup";
   return (
     <div className="flex flex-col h-full" style={{ padding: "20px 20px 24px" }}>
-      <span style={{ fontFamily: "'Zilla Slab', serif", fontWeight: 700, fontSize: 24, color: COLORS.textOnGreen }}>
+      <div className="flex items-center" style={{ gap: 12, marginBottom: 26 }}>
+        <BrandMark size={52} />
+        <div className="flex flex-col" style={{ gap: 4 }}>
+          <Wordmark size={30} />
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, letterSpacing: 1, color: COLORS.gold }}>
+            HELP'S ON THE WAY
+          </span>
+        </div>
+      </div>
+      <span style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 31, letterSpacing: 0.3, color: COLORS.textOnGreen }}>
         {isSignup ? "Create an account" : "Welcome back"}
       </span>
       <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.textOnGreenMuted, marginTop: 4 }}>
@@ -1650,7 +1681,7 @@ export default function CustomerApp() {
           if (searchTimerRef.current) clearInterval(searchTimerRef.current);
           setMatch({
             providerId: job.accepted_provider_id,
-            providerName: "Provider",
+            providerName: "Your pro",
             category: selectedOnDemandCategory,
             rating: 0,
             etaMinutes: 7,
@@ -1755,7 +1786,7 @@ export default function CustomerApp() {
       style={{ minHeight: "100vh", background: "#05060A", padding: 24 }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
       `}</style>
 
       {/* Phone frame */}
